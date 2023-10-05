@@ -30,7 +30,7 @@ app.use('/event', availabilityRouter);
 // const apikey=process.env.API_KEY;
 // const { google } = require('googleapis');
 
-app.use(cors({ origin: 'meet-n-go', credentials: true }));
+app.use(cors({ origin: 'http://localhost:3001', credentials: true }));
 app.use(session({
     secret:'cats', // change to .env variable
     resave: false,
@@ -58,30 +58,19 @@ app.get('/',
 
 app.get('/google/callback',
     passport.authenticate('google',{
-        // successRedirect: '/protected',
-        successRedirect: 'meet-n-go/home.html',
+        successRedirect: '/protected',
         failureRedirect: '/auth/failure',
     }));
 
 app.get('/auth/failure', (req,res) => {
-    res.redirect('meet-n-go');
+    res.redirect('http://localhost:3001');
 });
 
 // adding isLoggedIn middleware function is called before the res is sent.
 app.get('/protected',isLoggedIn, (req,res) => {
-    // const encryptedCookie = encrypt.encrypt_cookie(req.user)
+    const encryptedCookie = encrypt.encrypt_cookie(req.user)
 
-    // res.cookie('encryptedUserData', encryptedCookie, { httpOnly: true });
-    console.log("req.user", req.user)
-    res.cookie('userData', JSON.stringify(req.user), { path:'/', domain:'.onrender.com', httpOnly: true, secure: true, sameSite: 'none', });
-    res.setHeader('Set-Cookie', 'userData=' + JSON.stringify(req.user) + '; Path=/; Domain=.onrender.com; HttpOnly; Secure; SameSite=None');
-    res.header('Access-Control-Allow-Origin', 'meet-n-go');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    res.header('Access-Control-Allow-Credentials', true);
-    const cookieValue = JSON.stringify(req.user);
-    console.log("cookieValue", cookieValue)
-    // res.send("cookie.set")
+    res.cookie('encryptedUserData', encryptedCookie, { httpOnly: true });
 
     var Username = req.user.profile.given_name;
     var Email = req.user.profile.email;
@@ -96,7 +85,7 @@ app.get('/protected',isLoggedIn, (req,res) => {
         if (err) {
           console.error('Error executing SQL query:', err);
           // if error redirect to login
-          res.redirect('meet-n-go')
+          res.redirect('http://localhost:3001')
         }
       
         // Access the count value from the result object
@@ -104,7 +93,7 @@ app.get('/protected',isLoggedIn, (req,res) => {
       
         if (count > 0) {
           // Email already exists, do not create another instance in db
-          res.redirect('meet-n-go/home.html');
+          res.redirect('http://localhost:3001/home.html');
         } 
         else {
           // Email doesn't exist, create a new instance in db
@@ -112,10 +101,10 @@ app.get('/protected',isLoggedIn, (req,res) => {
             if (err) {
               console.error('Error executing SQL query:', err);
               // if error redirect to login
-              res.redirect('meet-n-go')
+              res.redirect('http://localhost:3001')
             }
             else{
-            res.redirect('meet-n-go/home.html');
+            res.redirect('http://localhost:3001/home.html');
             ;}
             
         })
@@ -125,23 +114,15 @@ app.get('/protected',isLoggedIn, (req,res) => {
 });
 
 app.get('/access', (req,res) => {
-  // const encryptedCookie = req.cookies.encryptedUserData;
-  // const accessToken = encrypt.decrypt_user_data(encryptedCookie,'access');
-
-  const userData = req.cookies.userData ? JSON.parse(req.cookies.userData) : null;
-  const accessToken = userData.profile.accessToken;
-
+  const encryptedCookie = req.cookies.encryptedUserData;
+  const accessToken = encrypt.decrypt_user_data(encryptedCookie,'access');
   res.send(accessToken);
 })
 
 
 app.get('/calendar-events', async (req, res) => {
-  // const encryptedCookie = req.cookies.encryptedUserData;
-  // const accessToken = encrypt.decrypt_user_data(encryptedCookie,'access');
-
-  const userData = req.cookies.userData ? JSON.parse(req.cookies.userData) : null;
-  const accessToken = userData.profile.accessToken;
-
+  const encryptedCookie = req.cookies.encryptedUserData;
+  const accessToken = encrypt.decrypt_user_data(encryptedCookie,'access');
   // console.log(accessToken);
   const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
   
@@ -150,7 +131,6 @@ app.get('/calendar-events', async (req, res) => {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        withCredentials: true
       },
     })
     .then(response => {
@@ -198,12 +178,8 @@ app.get('/calendar-events', async (req, res) => {
 
 
 app.get('/userData', (req,res) => {
-    // const encryptedCookie = req.cookies.encryptedUserData;
-    // const email = encrypt.decrypt_user_data(encryptedCookie,'email');
-
-    const userData = req.cookies.userData ? JSON.parse(req.cookies.userData) : null;
-    const email = userData.profile.email;
-
+    const encryptedCookie = req.cookies.encryptedUserData;
+    const email = encrypt.decrypt_user_data(encryptedCookie,'email');
     const data = {'email' : email}
     res.json(data);
 });
@@ -221,11 +197,8 @@ app.post('/create-event', async (req, res) => {
     const date_str = eventData.datePick;
   
     const date_lst = date_func.process_date(date_str);
-    // const encryptedCookie = req.cookies.encryptedUserData;
-    // const email = encrypt.decrypt_user_data(encryptedCookie,'email');
-
-    const userData = req.cookies.userData ? JSON.parse(req.cookies.userData) : null;
-    const email = userData.profile.email;
+    const encryptedCookie = req.cookies.encryptedUserData;
+    const email = encrypt.decrypt_user_data(encryptedCookie,'email');
   
     try {
       // Check for email
@@ -246,7 +219,7 @@ app.post('/create-event', async (req, res) => {
   
         // Respond to the client
         // res.send('Event created successfully!');
-        const eventURL = `meet-n-go/available.html?eventId=${eventId}`;
+        const eventURL = `http://localhost:3001/available.html?eventId=${eventId}`;
         res.redirect(eventURL);
       } 
       else {
@@ -262,14 +235,11 @@ app.post('/create-event', async (req, res) => {
 app.get('/filter', async (req,res) => {
     const requestedCategory = req.query.category;
 
-    // const encryptedCookie = req.cookies.encryptedUserData;
-    // const email = encrypt.decrypt_user_data(encryptedCookie,'email');
-
-    const userData = req.cookies.userData ? JSON.parse(req.cookies.userData) : null;
-    const email = userData.profile.email;
+    const encryptedCookie = req.cookies.encryptedUserData;
+    const email = encrypt.decrypt_user_data(encryptedCookie,'email');
 
     if (requestedCategory === 'all') {
-      axios.get(`MeetnGo/event/api/${email}`, {withCredentials: true})
+      axios.get(`http://localhost:3000/event/api/${email}`)
       .then(async response => {
         const data = response.data;
         let all_events = {};
@@ -279,16 +249,16 @@ app.get('/filter', async (req,res) => {
         if (data) {
           all_events = await get_all_events(data);
           my_events = await get_my_created_events(email);
-          // Merge listA and listB
-          const mergedList = [...all_events, ...my_events];
-
-          // Remove duplicates based on EventName and EventID
-          result = mergedList.filter((item, index, self) => 
-          index === self.findIndex(i =>
-          i.EventName === item.EventName && i.EventID === item.EventID
-        ));
         }
 
+        // Merge listA and listB
+        const mergedList = [...all_events, ...my_events];
+
+        // Remove duplicates based on EventName and EventID
+        result = mergedList.filter((item, index, self) => 
+        index === self.findIndex(i =>
+        i.EventName === item.EventName && i.EventID === item.EventID
+        ));
         res.json(result);
       })
         
@@ -299,7 +269,7 @@ app.get('/filter', async (req,res) => {
     
     }
     else if (requestedCategory === 'other') {
-      axios.get(`MeetnGo/event/api/${email}`, {withCredentials: true})
+      axios.get(`http://localhost:3000/event/api/${email}`)
       .then(async response => {
         let all_events = {};
         let my_events = {};
@@ -385,7 +355,7 @@ app.get('/logout', (req,res) => {
         if (err) { return next(err); }
         req.session.destroy();
         res.clearCookie('encryptedUserData', { httpOnly: true });
-        res.redirect('meet-n-go');
+        res.redirect('http://localhost:3001');
       });
 });
 
